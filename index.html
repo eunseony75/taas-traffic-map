@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>지자체별 교통사고 통계 지도 (교육용)</title>
+    <title>지자체별 교통사고 통계 지도 (실전 교육용)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS -->
@@ -17,50 +17,65 @@
 <body class="bg-gray-100 h-screen flex flex-col md:flex-row overflow-hidden">
 
     <!-- 사이드바 패널 -->
-    <div class="w-full md:w-80 bg-white shadow-lg z-20 flex flex-col p-4">
-        <h1 class="text-xl font-bold text-gray-800 mb-2">교통사고 통계 조회</h1>
-        <p class="text-xs text-gray-500 mb-4">숭의여자중학교 중심 반경 1km 실습 예제</p>
+    <div class="w-full md:w-80 bg-white shadow-lg z-20 flex flex-col p-4 overflow-y-auto">
+        <h1 class="text-xl font-bold text-gray-800 mb-1">교통사고 통계 분석기</h1>
+        <p class="text-xs text-gray-500 mb-4">숭의여자중학교 중심 반경 1km 분석</p>
         
-        <!-- 데이터 소스 선택 (교육용 핵심 기능) -->
+        <!-- 데이터 소스 선택 -->
         <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <label class="block text-sm font-bold text-blue-800 mb-2">데이터 소스 선택</label>
+            <label class="block text-sm font-bold text-blue-800 mb-2">데이터 수집 모드</label>
             <div class="flex gap-2">
                 <button id="modeSim" class="flex-1 py-1.5 px-2 text-xs font-semibold rounded bg-blue-600 text-white transition">
-                    시뮬레이션 (추천)
+                    시뮬레이션
                 </button>
                 <button id="modeApi" class="flex-1 py-1.5 px-2 text-xs font-semibold rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition">
                     실제 API 연동
                 </button>
             </div>
-            <p id="modeDesc" class="text-[11px] text-blue-600 mt-2">※ CORS 에러 없이 즉시 작동하는 가상 데이터 모드입니다.</p>
         </div>
 
-        <!-- API 입력 영역 (실제 API 모드에서 활성화) -->
-        <div id="apiInputGroup" class="mb-4 hidden opacity-50 pointer-events-none transition-opacity duration-300">
-            <label for="apiKey" class="block text-sm font-medium text-gray-700 mb-1">TAAS API 키</label>
-            <input type="text" id="apiKey" placeholder="공공데이터포털 API 키 입력" 
-                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <p class="text-[10px] text-red-500 mt-1">※ 브라우저 직접 호출 시 CORS 보안 제한이 발생할 수 있습니다.</p>
+        <!-- API 입력 영역 -->
+        <div id="apiInputGroup" class="mb-4 hidden opacity-50 pointer-events-none transition-all">
+            <div class="mb-3">
+                <label for="apiKey" class="block text-xs font-bold text-gray-700 mb-1">공공데이터포털 API Key</label>
+                <input type="text" id="apiKey" placeholder="인코딩 또는 디코딩 키 입력" 
+                       class="w-full border border-gray-300 rounded-md px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div class="mb-3">
+                <label for="apiType" class="block text-xs font-bold text-gray-700 mb-1">신청한 API 유형 선택</label>
+                <select id="apiType" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="lgStat">지자체별 사고 통계 (지자체단위)</option>
+                    <option value="frequentzone">보행자/스쿨존 사고다발지 (좌표포함)</option>
+                </select>
+                <p class="text-[10px] text-gray-400 mt-1">※ 지자체별 통계는 좌표가 없으므로 동작구 영역에 통합 표시됩니다.</p>
+            </div>
+            
+            <div class="flex items-center gap-2 mb-1">
+                <input type="checkbox" id="useProxy" checked class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                <label for="useProxy" class="text-xs font-medium text-gray-700">CORS 프록시 경유 (GitHub 배포 시 필수)</label>
+            </div>
         </div>
 
+        <!-- 연도 선택 -->
         <div class="mb-4">
-            <label for="searchYear" class="block text-sm font-medium text-gray-700 mb-1">조회 연도</label>
+            <label for="searchYear" class="block text-sm font-medium text-gray-700 mb-1">조회 대상 연도</label>
             <select id="searchYear" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="2025">2025년</option>
-                <option value="2024">2024년</option>
+                <option value="2024" selected>2024년</option>
                 <option value="2023">2023년</option>
             </select>
         </div>
 
         <button id="fetchDataBtn" class="w-full bg-blue-600 text-white rounded-md px-4 py-2 font-medium hover:bg-blue-700 transition shadow-md">
-            데이터 분석 실행
+            데이터 수집 및 매핑
         </button>
 
-        <!-- 결과 패널 -->
-        <div class="mt-6 flex-grow overflow-auto">
-            <h2 class="text-sm font-bold text-gray-600 mb-2">분석 결과 요약</h2>
-            <div id="resultPanel" class="text-sm text-gray-500 bg-gray-50 p-3 rounded border border-gray-200 min-h-[120px]">
-                좌측 설정을 확인한 후 '데이터 분석 실행' 버튼을 누르세요.
+        <!-- 결과 요약 패널 -->
+        <div class="mt-6 flex-grow">
+            <h2 class="text-sm font-bold text-gray-600 mb-2">실시간 데이터 피드</h2>
+            <div id="resultPanel" class="text-sm text-gray-500 bg-gray-50 p-3 rounded border border-gray-200 min-h-[150px]">
+                설정을 마친 후 분석 버튼을 누르세요.
             </div>
         </div>
     </div>
@@ -70,32 +85,29 @@
         <div id="map"></div>
         
         <!-- 알림 메시지 박스 -->
-        <div id="messageBox" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900/90 text-white px-4 py-2.5 rounded-lg shadow-xl z-50 hidden text-sm font-medium">
+        <div id="messageBox" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-5 py-3 rounded-lg shadow-2xl z-50 hidden text-sm font-semibold max-w-sm text-center">
             <span id="messageText"></span>
         </div>
     </div>
 
     <script>
-        // 숭의여자중학교 정밀 위경도 좌표 설정
+        // 초기 설정: 숭의여자중학교 정밀 위경도
         const centerLat = 37.51185;
         const centerLng = 126.92953;
         
-        // 1. 지도 초기화
         const map = L.map('map').setView([centerLat, centerLng], 15);
 
-        // OpenStreetMap 타일 레이어 추가
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap'
+            attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
-        // 숭의여자중학교 랜드마크 마커 설정
         const schoolIcon = L.divIcon({
             html: `
                 <div class="relative flex flex-col items-center">
-                    <div class="bg-red-600 text-white px-2 py-1 rounded shadow-lg text-xs font-bold whitespace-nowrap border border-white">
+                    <div class="bg-blue-700 text-white px-2 py-1 rounded shadow-lg text-xs font-bold whitespace-nowrap border border-white">
                         🏫 숭의여자중학교
                     </div>
-                    <div class="w-2 h-2 bg-red-600 rotate-45 -mt-1 shadow-lg"></div>
+                    <div class="w-2 h-2 bg-blue-700 rotate-45 -mt-1 shadow-lg"></div>
                 </div>
             `,
             className: 'custom-icon',
@@ -104,25 +116,19 @@
         });
         L.marker([centerLat, centerLng], {icon: schoolIcon}).addTo(map);
 
-        // 사고 범위 표시용 데이터 레이어
         const dataLayer = L.layerGroup().addTo(map);
+        let currentMode = 'simulation';
 
-        // 상태 관리 변수 (기본값: 시뮬레이션 모드)
-        let currentMode = 'simulation'; 
-
-        // 모드 전환 UI 이벤트 처리
+        // UI 제어
         const btnSim = document.getElementById('modeSim');
         const btnApi = document.getElementById('modeApi');
         const apiInputGroup = document.getElementById('apiInputGroup');
-        const modeDesc = document.getElementById('modeDesc');
 
         btnSim.addEventListener('click', () => {
             currentMode = 'simulation';
             btnSim.className = "flex-1 py-1.5 px-2 text-xs font-semibold rounded bg-blue-600 text-white transition";
             btnApi.className = "flex-1 py-1.5 px-2 text-xs font-semibold rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition";
             apiInputGroup.classList.add('hidden', 'opacity-50', 'pointer-events-none');
-            modeDesc.textContent = "※ CORS 에러 없이 즉시 작동하는 가상 데이터 모드입니다.";
-            modeDesc.className = "text-[11px] text-blue-600 mt-2";
         });
 
         btnApi.addEventListener('click', () => {
@@ -130,143 +136,219 @@
             btnApi.className = "flex-1 py-1.5 px-2 text-xs font-semibold rounded bg-blue-600 text-white transition";
             btnSim.className = "flex-1 py-1.5 px-2 text-xs font-semibold rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition";
             apiInputGroup.classList.remove('hidden', 'opacity-50', 'pointer-events-none');
-            modeDesc.textContent = "※ 발급받으신 실제 TAAS API 키를 사용하여 호출합니다.";
-            modeDesc.className = "text-[11px] text-emerald-600 mt-2";
         });
 
-        // 커스텀 알림창 함수
-        function showMessage(text, duration = 3000) {
+        function showMessage(text, duration = 4000) {
             const msgBox = document.getElementById('messageBox');
             const msgText = document.getElementById('messageText');
-            msgText.textContent = text;
+            msgText.innerHTML = text;
             msgBox.classList.remove('hidden');
             setTimeout(() => { msgBox.classList.add('hidden'); }, duration);
         }
 
-        // 데이터 분석 실행 핸들러
+        // 실행
         document.getElementById('fetchDataBtn').addEventListener('click', async () => {
-            const apiKey = document.getElementById('apiKey').value.trim();
+            const rawApiKey = document.getElementById('apiKey').value.trim();
             const year = document.getElementById('searchYear').value;
+            const apiType = document.getElementById('apiType').value;
+            const useProxy = document.getElementById('useProxy').checked;
 
-            if (currentMode === 'api' && !apiKey) {
-                showMessage("API 키를 입력해주세요.");
+            if (currentMode === 'simulation') {
+                showMessage("시뮬레이션 모드를 실행합니다.");
+                renderSimulation(year);
                 return;
             }
 
-            showMessage("데이터 분석을 진행하고 있습니다...");
-            document.getElementById('resultPanel').innerHTML = "로딩 중...";
+            if (!rawApiKey) {
+                showMessage("API Key를 입력해주십시오.");
+                return;
+            }
 
-            if (currentMode === 'simulation') {
-                // 교육용 가상 데이터 생성 데모 실행
-                setTimeout(() => {
-                    renderSimulationData(year);
-                }, 600);
-            } else {
-                // 실제 API 연동 시도
+            // 이중 인코딩 방지: 이미 인코딩된 키의 경우 디코딩 수행
+            let apiKey = rawApiKey;
+            if (rawApiKey.includes('%')) {
                 try {
-                    const apiUrl = `https://apis.data.go.kr/B552061/TAAS/localgov?serviceKey=${encodeURIComponent(apiKey)}&searchYearCd=${year}&type=json`;
-                    
-                    const response = await fetch(apiUrl);
-                    if (!response.ok) throw new Error("네트워크 응답 오류");
-                    const data = await response.json();
-                    
-                    // 실제 데이터 파싱 및 지도 렌더링 로직 위치
-                    // (공공데이터 API 스키마에 따라 가공 필요)
-                    processRealData(data, year);
-                    
-                } catch (error) {
-                    console.error(error);
-                    showMessage("CORS 또는 API 키 오류 발생. 시뮬레이션 모드를 권장합니다.");
-                    document.getElementById('resultPanel').innerHTML = `
-                        <div class="text-red-600 font-semibold">CORS 통신 거부 또는 API 오류</div>
-                        <p class="text-xs text-gray-500 mt-1">서버 보안 정책(CORS)으로 인해 브라우저에서 직접 공공데이터포털 API를 호출하지 못했습니다.</p>
-                        <p class="text-xs text-blue-600 font-semibold mt-2">💡 해결방법: '시뮬레이션' 모드로 전환하여 테스트하세요.</p>
-                    `;
+                    apiKey = decodeURIComponent(rawApiKey);
+                } catch(e) {
+                    console.warn("디코딩 실패.");
                 }
+            }
+
+            showMessage("데이터 서버에 접속을 시도합니다...");
+            document.getElementById('resultPanel').innerHTML = "데이터 로딩 중...";
+
+            // API 엔드포인트 분기 (동작구 기준)
+            let targetUrl = "";
+            if (apiType === "lgStat") {
+                targetUrl = `http://apis.data.go.kr/B552061/lgStat/getRestLgStat?serviceKey=${encodeURIComponent(apiKey)}&searchYearCd=${year}&siDo=11&guGun=590&type=json`;
+            } else {
+                targetUrl = `http://apis.data.go.kr/B552061/frequentzoneChild/getRestFrequentzoneChild?serviceKey=${encodeURIComponent(apiKey)}&searchYearCd=${year}&siDo=11&guGun=590&type=json`;
+            }
+
+            // CORS 우회 적용
+            let finalUrl = targetUrl;
+            if (useProxy) {
+                finalUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+            }
+
+            try {
+                const response = await fetch(finalUrl);
+                if (!response.ok) throw new Error("네트워크 응답 오류");
+                
+                const responseText = await response.text();
+                const data = JSON.parse(responseText);
+
+                if (data.resultCode && data.resultCode !== "00") {
+                    throw new Error(`[API 오류] ${data.resultMsg} (코드: ${data.resultCode})`);
+                }
+
+                processAndRenderData(data, apiType, year);
+
+            } catch (error) {
+                console.error(error);
+                showMessage(`오류 발생. 인증 정보 또는 CORS 상태를 확인하십시오.`);
+                document.getElementById('resultPanel').innerHTML = `
+                    <div class="text-red-600 font-bold">인증 실패 혹은 시스템 오류</div>
+                    <p class="text-xs text-gray-500 mt-1">API 서비스 키 미등록 상태이거나 네트워크 접근이 차단되었습니다.</p>
+                `;
             }
         });
 
-        // 교육용 시뮬레이션 데이터 생성기 (연도별로 고정된 특성 할당)
-        function renderSimulationData(year) {
+        // 수집 데이터 파싱 및 맵핑
+        function processAndRenderData(data, apiType, year) {
             dataLayer.clearLayers();
             
-            // 연도별 시뮬레이션 난수 시드 설정을 통해 연도가 바뀌면 통계치도 유의미하게 변화하도록 구현
+            if (apiType === "lgStat") {
+                const items = data.items?.item;
+                if (!items || items.length === 0) {
+                    document.getElementById('resultPanel').innerHTML = `해당 데이터가 존재하지 않습니다.`;
+                    return;
+                }
+                const info = Array.isArray(items) ? items[0] : items;
+                
+                const districtLat = 37.5124;
+                const districtLng = 126.9395;
+                const accCnt = info.acc_cnt || 0;
+                const dthDnvCnt = info.dth_dnv_cnt || 0;
+
+                const circle = L.circle([districtLat, districtLng], {
+                    color: '#3b82f6',
+                    fillColor: '#3b82f6',
+                    fillOpacity: 0.3,
+                    radius: 500
+                }).addTo(dataLayer);
+
+                circle.bindPopup(`
+                    <div class="text-xs">
+                        <b class="text-sm">동작구 교통안전 통계</b><br>
+                        기준연도: ${year}년<br>
+                        사고건수: <b>${accCnt}건</b><br>
+                        사망자수: <span class="text-red-500 font-bold">${dthDnvCnt}명</span>
+                    </div>
+                `).openPopup();
+
+                map.setView([districtLat, districtLng], 14);
+
+                document.getElementById('resultPanel').innerHTML = `
+                    <div class="space-y-1 text-xs">
+                        <p class="font-bold text-blue-600">데이터 수신 완료</p>
+                        <p>동작구 연간 사고량: ${accCnt}건</p>
+                        <p>동작구 사망자수: ${dthDnvCnt}명</p>
+                    </div>
+                `;
+
+            } else {
+                const items = data.items?.item || [];
+                if (items.length === 0) {
+                    document.getElementById('resultPanel').innerHTML = `해당 연도 데이터가 없습니다.`;
+                    return;
+                }
+
+                let totalAccidents = 0;
+                items.forEach(item => {
+                    const lat = parseFloat(item.la_crd);
+                    const lng = parseFloat(item.lo_crd);
+                    const locationName = item.spot_nm || "지정 구역";
+                    const count = item.occur_cnt || 1;
+                    totalAccidents += parseInt(count);
+
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        const markerCircle = L.circle([lat, lng], {
+                            color: '#ef4444',
+                            fillColor: '#ef4444',
+                            fillOpacity: 0.5,
+                            radius: 100
+                        }).addTo(dataLayer);
+
+                        markerCircle.bindPopup(`
+                            <div class="text-xs">
+                                <b class="text-sm text-red-600">사고다발지역</b><br>
+                                위치: ${locationName}<br>
+                                발생건수: <b>${count}건</b>
+                            </div>
+                        `);
+                    }
+                });
+
+                document.getElementById('resultPanel').innerHTML = `
+                    <div class="space-y-1 text-xs">
+                        <p class="font-bold text-red-600">지점 매핑 성공</p>
+                        <p>수집된 위험 구역: ${items.length}개소</p>
+                        <p>연계 집계 사고량: ${totalAccidents}건</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 가상 데이터 시뮬레이션
+        function renderSimulation(year) {
+            dataLayer.clearLayers();
+            const seed = parseInt(year);
             let accidentCount = 0;
             let totalCasualties = 0;
-            let seed = parseInt(year);
 
-            // 가상 데이터 세트 정의
-            const mockLocations = [
-                { lat: 37.5132, lng: 126.9281, type: "스쿨존 보행자 사고", baseCasualties: 1 },
-                { lat: 37.5105, lng: 126.9312, type: "교차로 신호위반", baseCasualties: 2 },
-                { lat: 37.5141, lng: 126.9325, type: "이륜차 안전운전 불이행", baseCasualties: 1 },
-                { lat: 37.5098, lng: 126.9265, type: "무단횡단 사고", baseCasualties: 1 },
-                { lat: 37.5125, lng: 126.9272, type: "차량 단독 충돌", baseCasualties: 3 },
-                { lat: 37.5085, lng: 126.9301, type: "스쿨존 속도위반", baseCasualties: 2 }
+            const mockData = [
+                { lat: 37.5132, lng: 126.9281, type: "숭의여중 진입로 이륜차 간섭", base: 1 },
+                { lat: 37.5105, lng: 126.9312, type: "대방역삼거리 신호 위반", base: 2 },
+                { lat: 37.5141, lng: 126.9325, type: "대방교차로 꼬리물기 충돌", base: 3 },
+                { lat: 37.5098, lng: 126.9265, type: "스쿨존 시야 방해", base: 1 },
+                { lat: 37.5115, lng: 126.9310, type: "미끄러짐 사고", base: 1 }
             ];
 
-            mockLocations.forEach((loc, index) => {
-                // 연도 시드를 사용한 유사 난수 생성으로 데이터 고정
-                const pseudoRandom = Math.sin(seed + index) * 0.5 + 0.5; // 0 ~ 1 사이 값
-                
-                // 특정 연도에 특정 사고가 발생했는지 결정 (확률적 모델링)
-                if (pseudoRandom > 0.3) {
+            mockData.forEach((loc, index) => {
+                const rand = Math.sin(seed + index) * 0.5 + 0.5;
+                if (rand > 0.3) {
                     accidentCount++;
-                    const casualties = Math.floor(pseudoRandom * 4) + loc.baseCasualties;
+                    const casualties = Math.floor(rand * 3) + loc.base;
                     totalCasualties += casualties;
-
                     const radius = casualties * 25;
-                    const color = casualties >= 4 ? '#ef4444' : (casualties >= 2 ? '#f97316' : '#eab308');
+                    const color = casualties >= 3 ? '#ef4444' : '#f97316';
 
                     const circle = L.circle([loc.lat, loc.lng], {
                         color: color,
                         fillColor: color,
-                        fillOpacity: 0.45,
+                        fillOpacity: 0.5,
                         radius: radius
-                    });
+                    }).addTo(dataLayer);
 
-                    // 팝업 내용 주입
                     circle.bindPopup(`
-                        <div class="text-sm font-sans">
-                            <span class="font-bold text-red-600">[사고 사례]</span><br>
+                        <div class="text-xs">
+                            <span class="font-bold text-blue-600">시뮬레이션 예시</span><br>
                             <b>유형:</b> ${loc.type}<br>
-                            <b>발생 연도:</b> ${year}년<br>
-                            <b>사상자 수:</b> <span class="font-bold text-red-500">${casualties}명</span>
+                            <b>사상자:</b> ${casualties}명
                         </div>
                     `);
-                    dataLayer.addLayer(circle);
                 }
             });
 
-            // 결과 패널에 통계 데이터 요약 반영
             document.getElementById('resultPanel').innerHTML = `
-                <div class="space-y-2">
-                    <p class="font-bold text-blue-700 text-base">📊 ${year}년도 교통분석 완료</p>
-                    <div class="grid grid-cols-2 gap-2 mt-1">
-                        <div class="bg-white p-2 rounded border border-gray-100 text-center">
-                            <span class="text-xs text-gray-500 block">총 사고 건수</span>
-                            <span class="text-lg font-bold text-gray-800">${accidentCount}건</span>
-                        </div>
-                        <div class="bg-white p-2 rounded border border-gray-100 text-center">
-                            <span class="text-xs text-gray-500 block">총 사상자 수</span>
-                            <span class="text-lg font-bold text-red-600">${totalCasualties}명</span>
-                        </div>
-                    </div>
-                    <p class="text-[11px] text-gray-400 mt-2">* 데이터 소스: 시뮬레이션 알고리즘 실행 완료</p>
+                <div class="space-y-1 text-xs">
+                    <p class="font-bold text-blue-600">가상분석 완료 (${year}년)</p>
+                    <p>예상 사고 건수: ${accidentCount}건</p>
+                    <p>추정 사상자: ${totalCasualties}명</p>
                 </div>
             `;
-            showMessage(`${year}년도 가상 교통사고 데이터를 매핑했습니다.`);
-        }
-
-        // 실제 API 파싱 렌더링 예시 함수 (CORS가 통과되어 데이터 수집 완료 시 작동)
-        function processRealData(data, year) {
-            dataLayer.clearLayers();
-            // 실제 수집 데이터의 위경도 정보를 추출하여 동적 맵에 매핑하는 코드가 들어갑니다.
-            // 데이터 규격 예시: data.items.item -> 배열 루프 연산 처리
-            document.getElementById('resultPanel').innerHTML = `
-                <div class="text-emerald-700 font-bold">실제 API 데이터 렌더링 성공</div>
-                <p class="text-xs text-gray-600 mt-1">국가 교통사고 데이터베이스에서 ${year}년 데이터를 정상 수집하였습니다.</p>
-            `;
+            map.setView([centerLat, centerLng], 15);
         }
     </script>
 </body>
